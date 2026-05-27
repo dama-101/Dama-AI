@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dama AI - Wavefront Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* =========================================
+           🎨 CSS: واجهة "البارد والساخن" (Dark Neon)
+           ========================================= */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
+        body {
+            background: linear-gradient(135deg, #090e17 0%, #111827 100%);
+            color: #f8fafc;
+            display: flex; justify-content: center; align-items: center;
+            height: 100dvh; overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%; max-width: 100%; height: 100dvh;
+            display: flex; flex-direction: column;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        }
+
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 800px; height: 90vh;
+                border-radius: 24px;
+                border: 1px solid rgba(16, 185, 129, 0.2);
+                box-shadow: 0 0 40px rgba(16, 185, 129, 0.1);
+            }
+            .header { border-top-left-radius: 24px; border-top-right-radius: 24px; }
+        }
+
+        .header {
+            padding: 20px; text-align: center;
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+            font-size: 1.5rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .header .logo {
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .voice-toggle {
+            background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981;
+            color: #10b981; padding: 5px 15px; border-radius: 20px;
+            font-size: 0.9rem; cursor: pointer; transition: 0.3s;
+        }
+        .voice-toggle.active { background: #10b981; color: #fff; box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); }
+
+        .chat-box {
+            flex: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth;
+        }
+
+        .chat-box::-webkit-scrollbar { width: 6px; }
+        .chat-box::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 10px; }
+
+        .message {
+            max-width: 88%; padding: 14px 18px; border-radius: 18px;
+            line-height: 1.6; font-size: 0.95rem; word-wrap: break-word;
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .user-message {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            align-self: flex-start; border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            align-self: flex-end; border-bottom-left-radius: 4px;
+            border-right: 4px solid #10b981;
+            box-shadow: -5px 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .thinking-process {
+            background: rgba(0, 0, 0, 0.3); border-radius: 8px;
+            padding: 12px; font-size: 0.85rem; color: #94a3b8;
+            margin-bottom: 10px; border: 1px dashed rgba(59, 130, 246, 0.4);
+            border-right: 3px solid #3b82f6;
+        }
+
+        .highlight { color: #10b981; font-weight: bold; font-size: 1.1rem; text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .unit-badge { background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; margin-right: 4px; }
+
+        .input-area {
+            display: flex; padding: 16px; background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(16, 185, 129, 0.2); gap: 12px;
+        }
+
+        input[type="text"] {
+            flex: 1; padding: 14px 20px; border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.3);
+            color: white; font-size: 0.95rem; outline: none; transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+
+        button.send-btn {
+            width: 50px; height: 50px; border-radius: 50%; border: none;
+            background: linear-gradient(135deg, #10b981, #059669); color: white;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); transition: 0.2s;
+        }
+        button.send-btn:hover { transform: scale(1.05); }
+        button.send-btn svg { width: 20px; height: 20px; fill: white; margin-right: -3px; }
+        
+        .typing-indicator { display: none; align-self: flex-end; color: #10b981; font-size: 0.9rem; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <span class="logo">🧠 Dama AI</span>
+            <button id="voiceBtn" class="voice-toggle active" onclick="toggleVoice()">🔊 الصوت: مفعل</button>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="message ai-message">
+                أهلاً بك! أنا <b>Dama AI</b> المتطور. اكتب لي وضعية إدماجية معقدة وسأقوم بتفكيكها خطوة بخطوة.
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">يعالج البيانات سياقياً...</div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="مثال: اشترى 125 محفظة بـ 2500 للواحدة، ووزع 378 كتاب بالتساوي على 9..." onkeypress="handleEnter(event)">
+            <button class="send-btn" onclick="sendMessage()" title="إرسال">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           🧠 JS: Dama AI Core (NLP Context + Memory + Voice)
+           ========================================= */
+        class DamaAI_Core {
+            constructor() {
+                this.memory = { lastResult: null, lastUnit: "" };
+                this.isVoiceEnabled = true;
+                // تمت إضافة وحدات جديدة تتناسب مع المسائل المدرسية
+                this.knownUnits = ["دينار", "دولار", "تفاحة", "كتاب", "محفظة", "خزانة", "كغ", "متر"];
+            }
+
+            updateMemory(result, unit) {
+                this.memory.lastResult = result;
+                if(unit) this.memory.lastUnit = unit;
+            }
+
+            handleSpecialInputs(text) {
+                if (text.includes("من صنعك") || text.includes("من برمجك")) {
+                    return "أنا محرك Dama AI، الروح المبرمجة خلف إبداعات Wavefront Gaming. جئت لأكسر قواعد الحساب التقليدي! 🚀";
+                }
+                if (text.includes("شكرا") || text.includes("شكرًا")) {
+                    return "العفو! أنا هنا دائماً لتحطيم الأرقام من أجلك.";
+                }
+                return null;
+            }
+
+            extractUnit(text) {
+                let foundUnit = "";
+                this.knownUnits.forEach(u => {
+                    if(text.includes(u)) foundUnit = u;
+                });
+                return foundUnit;
+            }
+
+            thinkAndSolve(inputText) {
+                let text = inputText.toLowerCase();
+                
+                // فحص الأسرار
+                const easterEgg = this.handleSpecialInputs(text);
+                if (easterEgg) { this.speak(easterEgg); return easterEgg; }
+
+                let detectedUnit = this.extractUnit(text) || this.memory.lastUnit;
+
+                // معالج النصوص السياقي: استخراج الأرقام ومواقعها
+                let regex = /\d+(\.\d+)?/g;
+                let numbersInfo = [];
+                let match;
+                while ((match = regex.exec(text)) !== null) {
+                    numbersInfo.push({ value: parseFloat(match[0]), index: match.index });
+                }
+
+                if (numbersInfo.length === 0) {
+                     return "عذراً، أحتاج لأرقام واضحة وسياق مفهوم لأقوم بالعملية.";
+                }
+
+                // 1. الذكاء السياقي للإضافة على مسألة سابقة
+                if (numbersInfo.length === 1 && this.memory.lastResult !== null) {
+                    return this.handleFollowUp(text, numbersInfo[0].value, detectedUnit);
+                }
+
+                // 2. المحرك السياقي القاتل (لفهم الوضعيات المعقدة)
+                if (numbersInfo.length >= 2) {
+                    let stepsHTML = "";
+                    let skipNext = false;
+                    let finalResults = [];
+                    let isComplexProblem = false; 
+
+                    for (let i = 0; i < numbersInfo.length - 1; i++) {
+                        if (skipNext) { skipNext = false; continue; }
+
+                        let n1 = numbersInfo[i].value;
+                        let n2 = numbersInfo[i + 1].value;
+                        
+                        // سحب النص الموجود بين الرقمين للتحليل
+                        let textBetween = text.substring(numbersInfo[i].index + String(n1).length, numbersInfo[i+1].index);
+                        
+                        let isMultiplication = /(الواحدة|الواحد|لكل|كل|ثمن)/i.test(textBetween) && !/(توزيع|ترتيب|قسم|بالتساوي)/i.test(textBetween);
+                        let isDivision = /(بالتساوي|ترتيب|توزيع|وزع|قسم|على)/i.test(textBetween);
+                        let isSubtraction = /(باقي|نقص|صرف|أعطى|خسر)/i.test(textBetween);
+                        let isSeparator = /(\.|،|و في|وفي|ثم)/i.test(textBetween);
+
+                        let res = 0;
+                        let actionDesc = "";
+
+                        if (isMultiplication) {
+                            res = n1 * n2;
+                            actionDesc = `ضربنا الكمية (${n1}) في السعر (${n2})`;
+                            skipNext = true; isComplexProblem = true;
+                        } else if (isDivision) {
+                            if (n2 === 0) return `<span style="color: #ef4444;">⚠️ خطأ فيزيائي: محاولة القسمة على صفر!</span>`;
+                            res = n1 / n2;
+                            actionDesc = `قسمنا ووزعنا (${n1}) على (${n2}) بالتساوي`;
+                            skipNext = true; isComplexProblem = true;
+                        } else if (isSubtraction) {
+                            res = n1 - n2;
+                            actionDesc = `طرحنا (${n2}) من الإجمالي (${n1})`;
+                            skipNext = true; isComplexProblem = true;
+                        } else if (!isSeparator && textBetween.length < 20) {
+                            res = n1 + n2;
+                            actionDesc = `جمعنا (${n1}) مع (${n2})`;
+                            skipNext = true;
+                        }
+
+                        if (actionDesc !== "") {
+                            finalResults.push(res);
+                            stepsHTML += `
+                                <div class="thinking-process" style="margin-bottom: 8px;">
+                                    ⚙️ <b>استنتاج سياقي:</b> تحليل العلاقة بين ${n1} و ${n2}.<br>
+                                    💡 <b>العملية:</b> ${actionDesc} <br>
+                                    ✅ <b>النتيجة الفرعية:</b> <span class="highlight">${res}</span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    // إذا تم تفكيك المسألة بنجاح
+                    if (isComplexProblem && stepsHTML !== "") {
+                        let finalAnswer = finalResults[finalResults.length-1];
+                        this.updateMemory(finalAnswer, detectedUnit);
+                        this.speak("تم تحليل أجزاء الوضعية الإدماجية بنجاح.");
+                        return stepsHTML + `<div style="margin-top:10px;">🎯 <b>تم حل المسألة بخطوات منفصلة!</b></div>`;
+                    }
+
+                    // [احتياطي] في حال لم تكن هناك كلمات مفتاحية (مثل 5 + 10)
+                    let numsOnly = numbersInfo.map(n => n.value);
+                    let sum = numsOnly.reduce((a,b) => a+b);
+                    this.updateMemory(sum, detectedUnit);
+                    this.speak("المجموع هو " + sum);
+                    return `
+                        <div class="thinking-process">
+                            ⚙️ <b>تحليل بسيط:</b> تفعيل الجمع المباشر.<br>
+                            💡 <b>الخطوات:</b> ${numsOnly.join(' + ')}
+                        </div>
+                        ✅ النتيجة النهائية: <span class="highlight">${sum}</span> ${detectedUnit ? `<span class="unit-badge">${detectedUnit}</span>` : ''}
+                    `;
+                }
+
+                return "عذراً، لم أتمكن من معالجة البيانات بشكل صحيح.";
+            }
+
+            handleFollowUp(text, num, detectedUnit) {
+                let oldRes = this.memory.lastResult;
+                let newRes = oldRes;
+                let action = "جمع";
+                if (text.includes("طرح") || text.includes("ناقص")) { newRes -= num; action = "طرح"; }
+                else if (text.includes("ضرب") || text.includes("في")) { newRes *= num; action = "ضرب"; }
+                else if (text.includes("قسم") || text.includes("على")) { newRes /= num; action = "قسمة"; }
+                else { newRes += num; }
+
+                this.updateMemory(newRes, detectedUnit);
+                this.speak("النتيجة الجديدة هي " + newRes);
+                return `
+                    <div class="thinking-process">
+                        ⚙️ <b>الذاكرة:</b> بناءً على نتيجتنا السابقة (${oldRes}).<br>
+                        💡 <b>العملية:</b> قمنا بـ ${action} الرقم ${num}.
+                    </div>
+                    ✅ النتيجة الجديدة: <span class="highlight">${newRes}</span> ${detectedUnit ? `<span class="unit-badge">${detectedUnit}</span>` : ''}
+                `;
+            }
+
+            speak(textToSpeak) {
+                if (!this.isVoiceEnabled) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'ar-SA';
+                utterance.rate = 1.1;
+                utterance.pitch = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // =========================================
+        // 🎮 UI Controller
+        // =========================================
+        const damaAI = new DamaAI_Core();
+        const chatBox = document.getElementById('chatBox');
+        const inputField = document.getElementById('userInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const voiceBtn = document.getElementById('voiceBtn');
+
+        function toggleVoice() {
+            damaAI.isVoiceEnabled = !damaAI.isVoiceEnabled;
+            if(damaAI.isVoiceEnabled) {
+                voiceBtn.classList.add('active');
+                voiceBtn.innerText = "🔊 الصوت: مفعل";
+                damaAI.speak("تم تفعيل النظام الصوتي");
+            } else {
+                voiceBtn.classList.remove('active');
+                voiceBtn.innerText = "🔇 الصوت: معطل";
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function sendMessage() {
+            const text = inputField.value.trim();
+            if (text === "") return;
+
+            addMessage(text, 'user-message');
+            inputField.value = "";
+            inputField.blur(); 
+
+            typingIndicator.style.display = 'block';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            setTimeout(() => {
+                typingIndicator.style.display = 'none';
+                const response = damaAI.thinkAndSolve(text);
+                addMessage(response, 'ai-message');
+            }, 800);
+        }
+
+        function addMessage(content, className) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerHTML = content;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>
